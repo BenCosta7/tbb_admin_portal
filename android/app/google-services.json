@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "527722317012",
+    "project_id": "billion-beats",
+    "storage_bucket": "billion-beats.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:527722317012:android:f7e1889561d06eede8a741",
+        "android_client_info": {
+          "package_name": "com.example.tbb_admin_portal"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBLJQ-bvGUpZjVYBfPBrtQpMxMqe4zD9L8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:527722317012:android:e3cfd608e7bc2629e8a741",
+        "android_client_info": {
+          "package_name": "com.example.three_billion_beats"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBLJQ-bvGUpZjVYBfPBrtQpMxMqe4zD9L8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
