@@ -1,8 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:tbb_admin_portal/services/admin_auth_service.dart';
-import 'package:tbb_admin_portal/features/content/content_management_screen.dart';
-// Corrected import to use the singular filename
-import 'package:tbb_admin_portal/features/patients/patient_screen.dart';
 
 class AdminDashboardScreen extends StatelessWidget {
   const AdminDashboardScreen({super.key});
@@ -25,55 +22,6 @@ class AdminDashboardScreen extends StatelessWidget {
             },
           ),
         ],
-      ),
-      // Add the navigation drawer
-      drawer: Drawer(
-        child: ListView(
-          padding: EdgeInsets.zero,
-          children: [
-            const DrawerHeader(
-              decoration: BoxDecoration(color: Colors.indigo),
-              child: Text(
-                'Admin Menu',
-                style: TextStyle(color: Colors.white, fontSize: 24),
-              ),
-            ),
-            ListTile(
-              leading: const Icon(Icons.dashboard),
-              title: const Text('Dashboard'),
-              onTap: () {
-                Navigator.pop(context); // Close the drawer
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.people),
-              title: const Text('Patients'),
-              onTap: () {
-                // Navigate to the new Patients Screen
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const PatientsScreen(),
-                  ),
-                );
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.upload_file),
-              title: const Text('Content Management'),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const ContentManagementScreen(),
-                  ),
-                );
-              },
-            ),
-          ],
-        ),
       ),
       body: const Center(
         child: Text(
