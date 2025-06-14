@@ -1,15 +1,13 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:intl/intl.dart'; // Package for date formatting
-// Import both services
+import 'package:intl/intl.dart';
 import 'package:tbb_admin_portal/services/admin_firestore_service.dart';
 import 'package:tbb_admin_portal/services/storage_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class PatientDetailScreen extends StatefulWidget {
   final QueryDocumentSnapshot patient;
-
   const PatientDetailScreen({super.key, required this.patient});
 
   @override
@@ -17,36 +15,38 @@ class PatientDetailScreen extends StatefulWidget {
 }
 
 class _PatientDetailScreenState extends State<PatientDetailScreen> {
-  // Create instances of both services
   final AdminFirestoreService _adminFirestoreService = AdminFirestoreService();
   final StorageService _storageService = StorageService();
   bool _isUploading = false;
 
-  // Controller for the message input
+  // Controllers for various input fields
   final _messageController = TextEditingController();
-  // Controller for the note input
   final _noteController = TextEditingController();
+  final _manualLabNameController = TextEditingController();
+  final _manualLabValueController = TextEditingController();
+  final _manualLabUnitController = TextEditingController();
+  DateTime _selectedDate = DateTime.now();
 
+  // Handles picking a PDF and uploading it to Firebase Storage and Firestore
   Future<void> _pickAndUploadLabReport() async {
     setState(() {
       _isUploading = true;
     });
-
     try {
       final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['pdf'],
       );
-
       if (result != null && result.files.single.bytes != null) {
         final file = result.files.single;
         final patientId = widget.patient.id;
 
-        // Step 1: Upload file to Storage using StorageService
-        final String path = 'lab_reports/$patientId/${file.name}';
+        final timestamp = DateTime.now().millisecondsSinceEpoch;
+        final uniqueFileName = '${timestamp}_${file.name}';
+        final String path = 'lab_reports/$patientId/$uniqueFileName';
+
         final uploadResult = await _storageService.uploadFile(path, file);
 
-        // Step 2: Create record in Firestore using AdminFirestoreService
         await _adminFirestoreService.createLabReportRecord(
           uid: patientId,
           fileName: file.name,
@@ -54,18 +54,39 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
           storagePath: uploadResult['storagePath']!,
         );
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Lab report uploaded successfully!')),
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Lab report uploaded successfully!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
       } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('File selection canceled.')),
+          );
+        }
+      }
+    } on FirebaseException catch (e) {
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('File selection canceled.')),
+          SnackBar(
+            content: Text('Firebase Error: ${e.message}'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('An unexpected error occurred: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     } finally {
       if (mounted) {
         setState(() {
@@ -75,9 +96,57 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
     }
   }
 
+  // Handles submitting the manual lab data entry form
+  void _addManualLabResult() async {
+    if (_manualLabNameController.text.isNotEmpty &&
+        _manualLabValueController.text.isNotEmpty &&
+        _manualLabUnitController.text.isNotEmpty) {
+      try {
+        await _adminFirestoreService.addStructuredLabResult(
+          uid: widget.patient.id,
+          labName: _manualLabNameController.text,
+          value: num.parse(_manualLabValueController.text),
+          unit: _manualLabUnitController.text,
+          date: _selectedDate,
+        );
+        _manualLabNameController.clear();
+        _manualLabValueController.clear();
+        _manualLabUnitController.clear();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Manual lab data added!')),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error adding manual lab data: ${e.toString()}'),
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  // Opens the date picker for the manual lab entry form
+  Future<void> _selectDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2101),
+    );
+    if (picked != null && picked != _selectedDate) {
+      setState(() {
+        _selectedDate = picked;
+      });
+    }
+  }
+
+  // Handles sending a message in the communication tab
   Future<void> _sendMessage() async {
     if (_messageController.text.trim().isEmpty) return;
-
     try {
       await _adminFirestoreService.sendMessage(
         uid: widget.patient.id,
@@ -85,15 +154,17 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
       );
       _messageController.clear();
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error sending message: ${e.toString()}')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error sending message: ${e.toString()}')),
+        );
+      }
     }
   }
 
+  // Handles adding a note in the notes/plan tab
   Future<void> _addNote() async {
     if (_noteController.text.trim().isEmpty) return;
-
     try {
       await _adminFirestoreService.addNote(
         uid: widget.patient.id,
@@ -101,18 +172,23 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
       );
       _noteController.clear();
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error adding note: ${e.toString()}')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error adding note: ${e.toString()}')),
+        );
+      }
     }
   }
 
+  // Launches a URL, used for opening the lab report PDFs
   Future<void> _launchURL(String urlString) async {
     final Uri url = Uri.parse(urlString);
     if (!await launchUrl(url)) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Could not launch $urlString')));
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Could not launch $urlString')));
+      }
     }
   }
 
@@ -120,6 +196,9 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
   void dispose() {
     _messageController.dispose();
     _noteController.dispose();
+    _manualLabNameController.dispose();
+    _manualLabValueController.dispose();
+    _manualLabUnitController.dispose();
     super.dispose();
   }
 
@@ -141,6 +220,7 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
           backgroundColor: Colors.indigo,
           foregroundColor: Colors.white,
           bottom: const TabBar(
+            isScrollable: true,
             labelColor: Colors.white,
             unselectedLabelColor: Colors.white70,
             indicatorColor: Colors.white,
@@ -190,25 +270,48 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  ElevatedButton.icon(
-                    icon: _isUploading
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 3,
+                  Card(
+                    elevation: 4,
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          const Text(
+                            'Upload Lab Report PDF',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
                             ),
-                          )
-                        : const Icon(Icons.upload_file),
-                    label: Text(
-                      _isUploading ? 'Uploading...' : 'Upload Lab Report (PDF)',
-                    ),
-                    onPressed: _isUploading ? null : _pickAndUploadLabReport,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.indigo,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
+                          ),
+                          const SizedBox(height: 16),
+                          ElevatedButton.icon(
+                            icon: _isUploading
+                                ? const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      color: Colors.white,
+                                      strokeWidth: 3,
+                                    ),
+                                  )
+                                : const Icon(Icons.upload_file),
+                            label: Text(
+                              _isUploading
+                                  ? 'Uploading...'
+                                  : 'Select & Upload PDF',
+                            ),
+                            onPressed: _isUploading
+                                ? null
+                                : _pickAndUploadLabReport,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.indigo,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                   const SizedBox(height: 24),
@@ -229,6 +332,11 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                             child: CircularProgressIndicator(),
                           );
                         }
+                        if (snapshot.hasError) {
+                          return const Center(
+                            child: Text('Error loading lab reports.'),
+                          );
+                        }
                         if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
                           return const Center(
                             child: Text(
@@ -236,24 +344,26 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                             ),
                           );
                         }
-
                         final labDocs = snapshot.data!.docs;
                         return ListView.builder(
                           itemCount: labDocs.length,
                           itemBuilder: (context, index) {
                             final labData =
                                 labDocs[index].data() as Map<String, dynamic>;
-                            final downloadUrl = labData['downloadUrl'];
-
-                            return ListTile(
-                              leading: const Icon(
-                                Icons.picture_as_pdf,
-                                color: Colors.red,
+                            return Card(
+                              margin: const EdgeInsets.only(bottom: 8.0),
+                              child: ListTile(
+                                leading: const Icon(
+                                  Icons.picture_as_pdf,
+                                  color: Colors.red,
+                                ),
+                                title: Text(
+                                  labData['fileName'] ?? 'No Filename',
+                                ),
+                                onTap: labData['downloadUrl'] != null
+                                    ? () => _launchURL(labData['downloadUrl'])
+                                    : null,
                               ),
-                              title: Text(labData['fileName'] ?? 'No Filename'),
-                              onTap: downloadUrl != null
-                                  ? () => _launchURL(downloadUrl)
-                                  : null,
                             );
                           },
                         );
@@ -286,7 +396,7 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                         itemBuilder: (context, index) {
                           final message =
                               messages[index].data() as Map<String, dynamic>;
-                          final bool isAdmin = message['sentBy'] == 'admin';
+                          final isAdmin = message['sentBy'] == 'admin';
                           return Align(
                             alignment: isAdmin
                                 ? Alignment.centerRight
@@ -389,7 +499,6 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                           final formattedDate = date != null
                               ? DateFormat.yMMMd().add_jm().format(date)
                               : 'No date';
-
                           return Card(
                             margin: const EdgeInsets.only(bottom: 8.0),
                             child: ListTile(

@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:tbb_admin_portal/services/admin_firestore_service.dart';
-// Import the new detail screen
 import 'package:tbb_admin_portal/features/patients/patient_detail_screen.dart';
 
-class PatientsScreen extends StatefulWidget {
-  const PatientsScreen({super.key});
+// Using singular 'PatientScreen' to match filename and convention
+class PatientScreen extends StatefulWidget {
+  const PatientScreen({super.key});
 
   @override
-  State<PatientsScreen> createState() => _PatientsScreenState();
+  State<PatientScreen> createState() => _PatientScreenState();
 }
 
-class _PatientsScreenState extends State<PatientsScreen> {
+class _PatientScreenState extends State<PatientScreen> {
   final AdminFirestoreService _adminFirestoreService = AdminFirestoreService();
 
   @override

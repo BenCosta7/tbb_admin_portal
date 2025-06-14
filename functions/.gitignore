@@ -1,0 +1,18 @@
+# Dependencies
+**/node_modules
+**/ios/Pods/
+**/ios/Flutter/App.framework
+
+# Ignore the embedded Google Cloud SDK
+**/google-cloud-sdk
+
+# Build artifacts
+/build/
+/.dart_tool/
+
+# IDE files
+/.idea/
+*.iml
+
+# Mac specific
+.DS_Store

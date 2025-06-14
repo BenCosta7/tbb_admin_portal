@@ -1,1 +1,18 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"billion-beats","appId":"1:527722317012:android:f7e1889561d06eede8a741","fileOutput":"android/app/google-services.json"}},"ios":{"default":{"projectId":"billion-beats","appId":"1:527722317012:ios:1c8bcaf9d5cd5a9fe8a741","uploadDebugSymbols":false,"fileOutput":"ios/Runner/GoogleService-Info.plist"}},"macos":{"default":{"projectId":"billion-beats","appId":"1:527722317012:ios:1c8bcaf9d5cd5a9fe8a741","uploadDebugSymbols":false,"fileOutput":"macos/Runner/GoogleService-Info.plist"}},"dart":{"lib/firebase_options.dart":{"projectId":"billion-beats","configurations":{"android":"1:527722317012:android:f7e1889561d06eede8a741","ios":"1:527722317012:ios:1c8bcaf9d5cd5a9fe8a741","macos":"1:527722317012:ios:1c8bcaf9d5cd5a9fe8a741","web":"1:527722317012:web:152aa3128cb896e6e8a741","windows":"1:527722317012:web:84ca08457b778859e8a741"}}}}}}
+{
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "functions",
+      "ignore": [
+        "node_modules",
+        ".git",
+        "firebase-debug.log",
+        "firebase-debug.*.log",
+        "*.local"
+      ],
+      "predeploy": [
+        "npm --prefix \"$RESOURCE_DIR\" run build"
+      ]
+    }
+  ]
+}
