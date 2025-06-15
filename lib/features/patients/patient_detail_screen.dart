@@ -41,6 +41,7 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
         final file = result.files.single;
         final patientId = widget.patient.id;
 
+        // Use a more robust unique file name
         final timestamp = DateTime.now().millisecondsSinceEpoch;
         final uniqueFileName = '${timestamp}_${file.name}';
         final String path = 'lab_reports/$patientId/$uniqueFileName';
@@ -191,6 +192,67 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
       }
     }
   }
+
+  // --- ADD THIS NEW METHOD ---
+  // Handles deleting a lab report from Storage and Firestore
+  Future<void> _deleteLabReport(QueryDocumentSnapshot labDoc) async {
+    // Show a confirmation dialog before deleting
+    final bool? confirm = await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Lab Report?'),
+        content: Text(
+          'Are you sure you want to delete "${labDoc['fileName']}"? This action cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    // If the user did not confirm, do nothing.
+    if (confirm != true) return;
+
+    try {
+      // Get the path and ID from the document
+      final String storagePath = labDoc['storagePath'];
+      final String patientId = widget.patient.id;
+      final String labReportId = labDoc.id;
+
+      // 1. Delete the file from Firebase Storage
+      await _storageService.deleteFile(storagePath);
+
+      // 2. Delete the record from Firestore
+      await _adminFirestoreService.deleteLabReport(patientId, labReportId);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Lab report deleted successfully.'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error deleting lab report: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+  // --- END OF NEW METHOD ---
 
   @override
   void dispose() {
@@ -348,8 +410,9 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                         return ListView.builder(
                           itemCount: labDocs.length,
                           itemBuilder: (context, index) {
+                            final labDoc = labDocs[index];
                             final labData =
-                                labDocs[index].data() as Map<String, dynamic>;
+                                labDoc.data() as Map<String, dynamic>;
                             return Card(
                               margin: const EdgeInsets.only(bottom: 8.0),
                               child: ListTile(
@@ -363,6 +426,16 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                                 onTap: labData['downloadUrl'] != null
                                     ? () => _launchURL(labData['downloadUrl'])
                                     : null,
+                                // --- THIS IS THE UPDATED WIDGET ---
+                                trailing: IconButton(
+                                  icon: const Icon(
+                                    Icons.delete_outline,
+                                    color: Colors.grey,
+                                  ),
+                                  onPressed: () => _deleteLabReport(labDoc),
+                                  tooltip: 'Delete Lab Report',
+                                ),
+                                // ------------------------------------
                               ),
                             );
                           },

@@ -69,6 +69,23 @@ class AdminFirestoreService {
         .snapshots();
   }
 
+  // --- ADDED METHOD ---
+  // Deletes a specific lab report document from the subcollection.
+  Future<void> deleteLabReport(String uid, String labReportId) async {
+    try {
+      await _db
+          .collection('users')
+          .doc(uid)
+          .collection('lab_reports')
+          .doc(labReportId)
+          .delete();
+    } catch (e) {
+      print('Error deleting lab report record: $e');
+      rethrow;
+    }
+  }
+  // --- END OF ADDED METHOD ---
+
   Future<List<QueryDocumentSnapshot>> getLabReportsOnce(String uid) async {
     try {
       final snapshot = await _db

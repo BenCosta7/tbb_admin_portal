@@ -19,4 +19,18 @@ class StorageService {
       rethrow;
     }
   }
+
+  // --- ADDED METHOD ---
+  // This function deletes a file from Firebase Storage using its full path.
+  Future<void> deleteFile(String storagePath) async {
+    try {
+      final ref = _storage.ref().child(storagePath);
+      await ref.delete();
+    } catch (e) {
+      // Handle potential errors, e.g., file not found
+      print('Error deleting file from storage: $e');
+      // Re-throw the error if you want to handle it in the UI
+      rethrow;
+    }
+  }
 }
